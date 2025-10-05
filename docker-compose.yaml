@@ -1,0 +1,44 @@
+services:
+  # Kafka broker in KRaft mode
+  kafka:
+    image: apache/kafka:4.1.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_NODE_ID: "1"
+      KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
+    volumes:
+     - kafka-data:/var/lib/kafka/data
+     - /etc/localtime:/etc/localtime:ro
+     - /etc/timezone:/etc/timezone:ro
+
+  # PySpark with Jupyter
+  pyspark:
+    image: jupyter/pyspark-notebook:latest
+    container_name: pyspark
+    depends_on:
+      - kafka
+    ports:
+      - "8888:8888"
+      - "4040:4040"
+    environment:
+      PYSPARK_PYTHON: python3
+      PYSPARK_DRIVER_PYTHON: jupyter
+      PYSPARK_DRIVER_PYTHON_OPTS: "notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root"
+    command: start-notebook.sh --NotebookApp.allow_root=True --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.ip=0.0.0.0 --NotebookApp.port=8888
+    volumes:
+      - ./notebooks:/home/jovyan/work
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+volumes:
+  kafka-data:
